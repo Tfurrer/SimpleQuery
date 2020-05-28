@@ -1,20 +1,3 @@
-
-class Processor
-{
-	constructor(_tables, _processes)
-	{
-		this.tables = _tables;
-		this.processes = _processes;
-	}
-	
-	Execute(){
-		const _this = this;
-		
-		
-	}
-	
-}
-
 class Process
 {
 	constructor(_input, _action, _params)
@@ -69,7 +52,7 @@ class Join
 				
 				let alltrue = true;
 				for(var i=0; i< t1.length; i++){
-					if(x[t1[i]] != y[t2[i]])
+					if(x[t1[i]] !== y[t2[i]])
 						alltrue = false;
 				}
 				if( alltrue)
@@ -121,14 +104,13 @@ class Calculation
 		grouping.map(x=> { 
 			const obj = [];
 			x.group.split('-').map((x,y)=> { 
-				if(cols[y] === 'int')
+				if(cols[y].type === 'int')
 					obj[y] = parseInt(x);
 				else
 					obj[y] = x;
 			});
 			result.Insert(obj.concat(x.sum));
 		});
-		console.log(result);
 		return result;
 	}
 }
@@ -204,7 +186,3 @@ class Table
 		return t;
 	}
 }
-
-
-
-
