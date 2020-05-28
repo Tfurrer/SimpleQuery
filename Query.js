@@ -1,3 +1,54 @@
+
+class Processor
+{
+	constructor(_tables, _processes)
+	{
+		this.tables = _tables;
+		this.processes = _processes;
+	}
+	
+	Execute(){
+		const _this = this;
+		
+		
+	}
+	
+}
+
+class Process
+{
+	constructor(_input, _action, _params)
+	{
+		this.input = _input;
+		this.action = _action;
+		this.params = _params
+		this.output = null;
+	}
+	Execute()
+	{
+		const _this = this;
+		const obj = {};
+		if(_this.input.length > 0)
+		{
+			_this.input.map(x=> {
+				if(x.output === null)
+					x.Execute();
+				});
+			if(_this.action.constructor.name === 'Join')
+			{
+				_this.action = new Join(_this.input[0].output,_this.input[1].output,_this.params[0],_this.params[1] );
+			}
+			if(_this.action.constructor.name === 'Calculation')
+			{
+				_this.action = new Calculation(_this.input[0].output,_this.params[0],_this.params[1]);
+			}		
+		}
+		_this.output = _this.action.Execute();
+		return _this.output;
+	}
+}
+
+
 class Join
 {
 	constructor(_table1, _table2, _fields1, _fields2)
@@ -10,14 +61,15 @@ class Join
 	Execute()
 	{
 		const _this = this;
+		//Conversion of Fields Needs to Remained Typed
 		const t1 = _this.table1.GetColumnIDs(..._this.fields1);
 		const t2 = _this.table2.GetColumnIDs(..._this.fields2);
-		return _this.table1.data.map(x=>{
+		const data = _this.table1.data.map(x=>{
 			return _this.table2.data.map(y=> {
 				
 				let alltrue = true;
 				for(var i=0; i< t1.length; i++){
-					if(x[t1[i]] !== y[t2[i]])
+					if(x[t1[i]] != y[t2[i]])
 						alltrue = false;
 				}
 				if( alltrue)
@@ -25,6 +77,9 @@ class Join
 				return null;
 			}).filter(y=> y !== null);
 		}).filter(x=> x !== null).flat();
+		const result = new Table(_this.table1.columns.concat(_this.table2.columns))
+		data.map(x=> { result.Insert(x)});
+		return result;
 	}
 }
 class Calculation
@@ -38,13 +93,12 @@ class Calculation
 	Execute()
 	{
 		const _this = this;
-		const groups = _this.Group(_this.table, _this.groupby, _this.action);
-		return groups;
+		return _this.Group(_this.table, _this.groupby, _this.action);
 	}
-	Group(arr, keys, action)
+	Group(table, keys, action)
 	{
 		const helper = {};
-		return arr.reduce(function(r, o) {
+		const grouping = table.data.reduce(function(r, o) {
 		  const key = keys.map(x=> {return o[x]; }).join('-');
 		  
 		  if(!helper[key]) {
@@ -56,6 +110,26 @@ class Calculation
 
 		  return r;
 		}, []);
+		const cols = [];
+		keys.map(x=> {
+			cols.push(new Column( table.columns.filter(y=> y.id === x)[0].name, table.columns.filter(y=> y.id === x)[0].type));
+		});
+		cols.push(new Column( table.columns.filter(y=> y.id === action)[0].name, 'int'));
+		
+		const result = new Table(cols);
+		//Conversion of Fields Needs to Remained Typed
+		grouping.map(x=> { 
+			const obj = [];
+			x.group.split('-').map((x,y)=> { 
+				if(cols[y] === 'int')
+					obj[y] = parseInt(x);
+				else
+					obj[y] = x;
+			});
+			result.Insert(obj.concat(x.sum));
+		});
+		console.log(result);
+		return result;
 	}
 }
 
@@ -79,19 +153,26 @@ class Table
 			throw new Error('Columns must be supplied');
 		this.columns = _columns.map((x,y)=> {return { id:y, name: x.name, type: x.type} });
 		this.data = [];
+		this.output = this;
 		
 	}
 	AddColumn(column)
 	{
 		const id = this.columns[this.columns.length-1].id +1
 		this.columns.push({ id: id, name: column.name, type: column.type});
+		_this.output = _this;
 	}
 	Insert(values)
 	{
 		const _this = this;
 		if(values.length !== _this.columns.length)
+		{
+			console.log(values);
+			console.log(_this.columns);
 			throw new Error('Values Array length != Column length')
+		}
 		_this.data.push(values);
+		_this.output = _this;
 	}
 	GetColumnIDs()
 	{
@@ -123,3 +204,7 @@ class Table
 		return t;
 	}
 }
+
+
+
+
